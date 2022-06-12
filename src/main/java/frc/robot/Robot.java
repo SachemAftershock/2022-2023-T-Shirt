@@ -5,94 +5,158 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
+import edu.wpi.first.wpilibj.motorcontrol.VictorSP;
+import frc.lib.AftershockDifferentialDrive;
+import frc.lib.AftershockXboxController;
+import edu.wpi.first.wpilibj.Compressor;
+import edu.wpi.first.wpilibj.PneumaticsControlModule;
+import edu.wpi.first.wpilibj.PneumaticsModuleType;
+import edu.wpi.first.wpilibj.Solenoid;
 
 /**
- * The VM is configured to automatically run this class, and to call the functions corresponding to
- * each mode, as described in the TimedRobot documentation. If you change the name of this class or
- * the package after creating this project, you must also update the build.gradle file in the
- * project.
+ * 
+ * @author Arhum Mudassir
+ * 
+ * Robot code for 2022 T-Shirt Bot (Hopefully gets used at some point)
+ * 
  */
 public class Robot extends TimedRobot {
-  private static final String kDefaultAuto = "Default";
-  private static final String kCustomAuto = "My Auto";
-  private String m_autoSelected;
-  private final SendableChooser<String> m_chooser = new SendableChooser<>();
+  
+  private VictorSP mStarboardDriveMotorA; 
+  private VictorSP mStarboardDriveMotorB; 
+  private VictorSP mPortDriveMotorA; 
+  private VictorSP mPortDriveMotorB; 
 
-  /**
-   * This function is run when the robot is first started up and should be used for any
-   * initialization code.
-   */
-  @Override
-  public void robotInit() {
-    m_chooser.setDefaultOption("Default Auto", kDefaultAuto);
-    m_chooser.addOption("My Auto", kCustomAuto);
-    SmartDashboard.putData("Auto choices", m_chooser);
+  private AftershockDifferentialDrive mDrive; 
+  private MotorControllerGroup mStarboard;
+  private MotorControllerGroup mPort;
+
+  private AftershockXboxController mController;
+
+  private Compressor mCompressor;
+  private Solenoid mCannonA, mCannonB, mCannonC, mCannonD, mCannonE, mCannonF; 
+  private PneumaticsControlModule mControlModule;
+  private int mCounter; 
+
+  private static final PneumaticsModuleType kModuleType = PneumaticsModuleType.CTREPCM;
+
+  enum CannonState {
+    eNone, eCannonA, eCannonB, eCannonC, eCannonD, eCannonE, eCannonF;
   }
 
-  /**
-   * This function is called every robot packet, no matter the mode. Use this for items like
-   * diagnostics that you want ran during disabled, autonomous, teleoperated and test.
-   *
-   * <p>This runs after the mode specific periodic functions, but before LiveWindow and
-   * SmartDashboard integrated updating.
-   */
+  private CannonState mSelectedCannon; 
+  private CannonState[] kCannonSequence = new CannonState[] {
+    CannonState.eNone,
+    CannonState.eCannonA,
+    CannonState.eCannonB,
+    CannonState.eCannonC,
+    CannonState.eCannonD,
+    CannonState.eCannonE,
+    CannonState.eCannonF,
+  };
+
+  @Override
+  public void robotInit() {
+
+    mStarboardDriveMotorA = new VictorSP(0);
+    mStarboardDriveMotorB = new VictorSP(1);
+    mPortDriveMotorA = new VictorSP(2);
+    mPortDriveMotorA = new VictorSP(3);
+
+    mStarboard = new MotorControllerGroup(mStarboardDriveMotorA, mStarboardDriveMotorB);
+    mPort = new MotorControllerGroup(mPortDriveMotorA, mPortDriveMotorB);
+    mDrive = new AftershockDifferentialDrive(mStarboard, mPort);
+
+    mController = new AftershockXboxController(0);
+
+    mControlModule = new PneumaticsControlModule(0);
+    mCannonA = new Solenoid(kModuleType, 0);
+    mCannonB = new Solenoid(kModuleType, 1);
+    mCannonC = new Solenoid(kModuleType, 2);
+    mCannonD = new Solenoid(kModuleType, 3);
+    mCannonE = new Solenoid(kModuleType, 4);
+    mCannonF = new Solenoid(kModuleType, 5);
+    mCounter = 0;
+
+  }
+  
   @Override
   public void robotPeriodic() {}
 
-  /**
-   * This autonomous (along with the chooser code above) shows how to select between different
-   * autonomous modes using the dashboard. The sendable chooser code works with the Java
-   * SmartDashboard. If you prefer the LabVIEW Dashboard, remove all of the chooser code and
-   * uncomment the getString line to get the auto name from the text box below the Gyro
-   *
-   * <p>You can add additional auto modes by adding additional comparisons to the switch structure
-   * below with additional strings. If using the SendableChooser make sure to add them to the
-   * chooser code above as well.
-   */
   @Override
-  public void autonomousInit() {
-    m_autoSelected = m_chooser.getSelected();
-    // m_autoSelected = SmartDashboard.getString("Auto Selector", kDefaultAuto);
-    System.out.println("Auto selected: " + m_autoSelected);
+  public void teleopInit() {
+
+    mCounter = 0;
+    
+    mCannonA.set(false);
+    mCannonB.set(false);
+    mCannonC.set(false);
+    mCannonD.set(false);
+    mCannonE.set(false);
+    mCannonF.set(false);
+
+    mSelectedCannon = kCannonSequence[mCounter];
+    mControlModule.enableCompressorDigital();
+
   }
 
-  /** This function is called periodically during autonomous. */
   @Override
-  public void autonomousPeriodic() {
-    switch (m_autoSelected) {
-      case kCustomAuto:
-        // Put custom auto code here
+  public void teleopPeriodic() {
+
+    double pow = mController.getLeftDeadbandY();
+    double rot = mController.getRightDeadbandX();
+
+    mDrive.arcadeDrive(pow, rot, false); //set true if somethings wrong, forgot what sqaure inputs did
+
+    if(mController.getAButtonPressed()) {
+      increment();
+    }
+
+    switch(mSelectedCannon) {
+      case eNone: 
+        mCannonF.set(false);
         break;
-      case kDefaultAuto:
-      default:
-        // Put default auto code here
+      case eCannonA :
+        mCannonA.set(true);
+        break;
+      case eCannonB :
+        mCannonA.set(false);
+        mCannonB.set(true);
+        break;
+      case eCannonC :
+        mCannonB.set(false);
+        mCannonC.set(true);
+        break;
+      case eCannonD :
+        mCannonC.set(false); 
+        mCannonD.set(true);
+        break;
+      case eCannonE :
+        mCannonD.set(false);
+        mCannonE.set(true);
+        break;
+      case eCannonF :
+        mCannonE.set(false);
+        mCannonF.set(true);
         break;
     }
+
+
   }
 
-  /** This function is called once when teleop is enabled. */
   @Override
-  public void teleopInit() {}
+  public void disabledInit() {
+    mCompressor.disable();
+  }
 
-  /** This function is called periodically during operator control. */
-  @Override
-  public void teleopPeriodic() {}
+  public void increment() {
+    if(mCounter <= 7) {
+      mCounter++;
+    } else {
+      mCounter = 0;
+    }
+    mSelectedCannon = kCannonSequence[mCounter];
+  }
 
-  /** This function is called once when the robot is disabled. */
-  @Override
-  public void disabledInit() {}
-
-  /** This function is called periodically when disabled. */
-  @Override
-  public void disabledPeriodic() {}
-
-  /** This function is called once when test mode is enabled. */
-  @Override
-  public void testInit() {}
-
-  /** This function is called periodically during test mode. */
-  @Override
-  public void testPeriodic() {}
 }
