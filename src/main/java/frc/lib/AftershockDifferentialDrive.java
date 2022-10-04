@@ -1,8 +1,9 @@
 package frc.lib;
 
+import com.ctre.phoenix.motorcontrol.NeutralMode;
+
 import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
-//import com.ctre.phoenix.motorcontrol.NeutralMode;
-import edu.wpi.first.wpilibj.motorcontrol.VictorSP;
+import edu.wpi.first.wpilibj.motorcontrol.Talon;
 
 /**
  * Implementation of Differential Drive
@@ -14,36 +15,22 @@ import edu.wpi.first.wpilibj.motorcontrol.VictorSP;
 public class AftershockDifferentialDrive {
     private MotorControllerGroup mLeft, mRight;
     private boolean mInvertRight;
-    //private NeutralMode mNeutralMode;
+    private NeutralMode mNeutralMode;
 
     private double mXSpeedDeadband = 0.02;
     private double mZRotationDeadband = 0.02;
 
-    // /**
-    //  * Constructor for Aftershock Differential Drive
-    //  * 
-    //  * @param left Left Controlling Motors, as TalonFXGroup
-    //  * @param right Right Controlling Motors, as TalonFXGroup
-    //  */
-    // public AftershockDifferentialDrive(VictorSP left, VictorSP right) {
-    //     mLeft = left;
-    //     mRight = right;
-
-    //     mInvertRight = false;
-    // }
-
     /**
+     * Constructor for Aftershock Differential Drive
      * 
-     * Constructor for motors using the MotorControllerGroupClass
-     * 
-     * @author Arhum Mudassir
-     * 
-     * @param leftMotors
-     * @param rightMotors
+     * @param left Left Controlling Motors, as TalonSRXGroup
+     * @param right Right Controlling Motors, as TalonSRXGroup
      */
     public AftershockDifferentialDrive(MotorControllerGroup left, MotorControllerGroup right) {
         mLeft = left;
-        mRight = right; 
+        mRight = right;
+
+        mInvertRight = false;
     }
 
     /**
@@ -52,20 +39,12 @@ public class AftershockDifferentialDrive {
      * Default is Coast
      * 
      * @param mode Neutral mode
-     * 
-     * Cant set Victor SP to brake mode through code
-     * 
      */
-    // public void setNeutralMode(NeutralMode mode) {
-    //     mNeutralMode = mode;
-    //     mLeft.setNeutralMode(mNeutralMode);
-    //     mRight.setNeutralMode(mNeutralMode);
-    // }
-
-    // public void setRampRate(double value) {
-    //     mLeft.setRampRate(value);
-    //     mRight.setRampRate(value);
-    // }
+    public void setNeutralMode(NeutralMode mode) {
+        mNeutralMode = mode;
+        // mLeft.setNeutralMode(mNeutralMode);
+        // mRight.setNeutralMode(mNeutralMode);
+    }
 
     /**
      * Inverts right set of motors
@@ -141,10 +120,6 @@ public class AftershockDifferentialDrive {
                 rightMotorOutput = xSpeed - zRotation;
             }
         }
-        //System.out.println("left --> " + leftMotorOutput + " right --> " + rightMotorOutput);
-        // if(Math.abs(leftMotorOutput - rightMotorOutput) > 0.0) {
-        //     System.out.println("ERROR : motor offset --> " + Math.abs(leftMotorOutput - rightMotorOutput));
-        // }
         set(leftMotorOutput, rightMotorOutput);
     }
 
@@ -155,20 +130,8 @@ public class AftershockDifferentialDrive {
      * @param rightSpeed Speed to drive Right Motors
      */
     public void set(double leftSpeed, double rightSpeed) {
-        if(leftSpeed > 1.0) {
-            leftSpeed = 1.0;
-        } 
-        if(rightSpeed > 1.0) {
-            rightSpeed = 1.0;
-        }
-        if(leftSpeed < -1.0) {
-            leftSpeed = -1.0;
-        }
-        if(rightSpeed < -1.0) {
-            rightSpeed = -1.0;
-        }
         mLeft.set(leftSpeed);
-        mRight.set(rightSpeed);
+        mRight.set(rightSpeed * .97);
     }
 
     /**

@@ -5,158 +5,86 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
-import edu.wpi.first.wpilibj.motorcontrol.VictorSP;
-import frc.lib.AftershockDifferentialDrive;
-import frc.lib.AftershockXboxController;
-import edu.wpi.first.wpilibj.Compressor;
-import edu.wpi.first.wpilibj.PneumaticsControlModule;
-import edu.wpi.first.wpilibj.PneumaticsModuleType;
-import edu.wpi.first.wpilibj.Solenoid;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
 /**
- * 
- * @author Arhum Mudassir
- * 
- * Robot code for 2022 T-Shirt Bot (Hopefully gets used at some point)
- * 
+ * The VM is configured to automatically run this class, and to call the functions corresponding to
+ * each mode, as described in the TimedRobot documentation. If you change the name of this class or
+ * the package after creating this project, you must also update the build.gradle file in the
+ * project.
  */
 public class Robot extends TimedRobot {
-  
-  private VictorSP mStarboardDriveMotorA; 
-  private VictorSP mStarboardDriveMotorB; 
-  private VictorSP mPortDriveMotorA; 
-  private VictorSP mPortDriveMotorB; 
+  private Command mAutonomousCommand;
 
-  private AftershockDifferentialDrive mDrive; 
-  private MotorControllerGroup mStarboard;
-  private MotorControllerGroup mPort;
+  private RobotContainer mRobotContainer;
 
-  private AftershockXboxController mController;
-
-  private Compressor mCompressor;
-  private Solenoid mCannonA, mCannonB, mCannonC, mCannonD, mCannonE, mCannonF; 
-  private PneumaticsControlModule mControlModule;
-  private int mCounter; 
-
-  private static final PneumaticsModuleType kModuleType = PneumaticsModuleType.CTREPCM;
-
-  enum CannonState {
-    eNone, eCannonA, eCannonB, eCannonC, eCannonD, eCannonE, eCannonF;
-  }
-
-  private CannonState mSelectedCannon; 
-  private CannonState[] kCannonSequence = new CannonState[] {
-    CannonState.eNone,
-    CannonState.eCannonA,
-    CannonState.eCannonB,
-    CannonState.eCannonC,
-    CannonState.eCannonD,
-    CannonState.eCannonE,
-    CannonState.eCannonF,
-  };
-
+  /**
+   * This function is run when the robot is first started up and should be used for any
+   * initialization code.
+   */
   @Override
   public void robotInit() {
-
-    mStarboardDriveMotorA = new VictorSP(0);
-    mStarboardDriveMotorB = new VictorSP(1);
-    mPortDriveMotorA = new VictorSP(2);
-    mPortDriveMotorA = new VictorSP(3);
-
-    mStarboard = new MotorControllerGroup(mStarboardDriveMotorA, mStarboardDriveMotorB);
-    mPort = new MotorControllerGroup(mPortDriveMotorA, mPortDriveMotorB);
-    mDrive = new AftershockDifferentialDrive(mStarboard, mPort);
-
-    mController = new AftershockXboxController(0);
-
-    mControlModule = new PneumaticsControlModule(0);
-    mCannonA = new Solenoid(kModuleType, 0);
-    mCannonB = new Solenoid(kModuleType, 1);
-    mCannonC = new Solenoid(kModuleType, 2);
-    mCannonD = new Solenoid(kModuleType, 3);
-    mCannonE = new Solenoid(kModuleType, 4);
-    mCannonF = new Solenoid(kModuleType, 5);
-    mCounter = 0;
-
+    // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
+    // autonomous chooser on the dashboard.
+    mRobotContainer = RobotContainer.getInstance();
+    mRobotContainer.initialize();
   }
-  
+
+  /**
+   * This function is called every robot packet, no matter the mode. Use this for items like
+   * diagnostics that you want ran during disabled, autonomous, teleoperated and test.
+   *
+   * <p>This runs after the mode specific periodic functions, but before LiveWindow and
+   * SmartDashboard integrated updating.
+   */
   @Override
-  public void robotPeriodic() {}
+  public void robotPeriodic() {
+    // Runs the Scheduler.  This is responsible for polling buttons, adding newly-scheduled
+    // commands, running already-scheduled commands, removing finished or interrupted commands,
+    // and running subsystem periodic() methods.  This must be called from the robot's periodic
+    // block in order for anything in the Command-based framework to work.
+    CommandScheduler.getInstance().run();
+  }
+
+  /** This function is called once each time the robot enters Disabled mode. */
+  @Override
+  public void disabledInit() {}
+
+  @Override
+  public void disabledPeriodic() {}
+
+  /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
+  @Override
+  public void autonomousInit() {
+    // m_autonomousCommand = m_robotContainer.getAutonomousCommand();
+
+    // schedule the autonomous command (example)
+    if (mAutonomousCommand != null) {
+      mAutonomousCommand.schedule();
+    }
+  }
+
+  /** This function is called periodically during autonomous. */
+  @Override
+  public void autonomousPeriodic() {}
 
   @Override
   public void teleopInit() {
-
-    mCounter = 0;
-    
-    mCannonA.set(false);
-    mCannonB.set(false);
-    mCannonC.set(false);
-    mCannonD.set(false);
-    mCannonE.set(false);
-    mCannonF.set(false);
-
-    mSelectedCannon = kCannonSequence[mCounter];
-    mControlModule.enableCompressorDigital();
-
+    CommandScheduler.getInstance().cancelAll();
   }
+
+  /** This function is called periodically during operator control. */
+  @Override
+  public void teleopPeriodic() {}
 
   @Override
-  public void teleopPeriodic() {
-
-    double pow = mController.getLeftDeadbandY();
-    double rot = mController.getRightDeadbandX();
-
-    mDrive.arcadeDrive(pow, rot, false); //set true if somethings wrong, forgot what sqaure inputs did
-
-    if(mController.getAButtonPressed()) {
-      increment();
-    }
-
-    switch(mSelectedCannon) {
-      case eNone: 
-        mCannonF.set(false);
-        break;
-      case eCannonA :
-        mCannonA.set(true);
-        break;
-      case eCannonB :
-        mCannonA.set(false);
-        mCannonB.set(true);
-        break;
-      case eCannonC :
-        mCannonB.set(false);
-        mCannonC.set(true);
-        break;
-      case eCannonD :
-        mCannonC.set(false); 
-        mCannonD.set(true);
-        break;
-      case eCannonE :
-        mCannonD.set(false);
-        mCannonE.set(true);
-        break;
-      case eCannonF :
-        mCannonE.set(false);
-        mCannonF.set(true);
-        break;
-    }
-
-
+  public void testInit() {
+    // Cancels all running commands at the start of test mode.
+    CommandScheduler.getInstance().cancelAll();
   }
 
+  /** This function is called periodically during test mode. */
   @Override
-  public void disabledInit() {
-    mCompressor.disable();
-  }
-
-  public void increment() {
-    if(mCounter <= 7) {
-      mCounter++;
-    } else {
-      mCounter = 0;
-    }
-    mSelectedCannon = kCannonSequence[mCounter];
-  }
-
+  public void testPeriodic() {}
 }
